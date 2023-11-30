@@ -1,0 +1,3 @@
+configMapData:
+  APP_SETTING_1: value1
+  APP_SETTING_2: value2
