@@ -1,0 +1,46 @@
+name: Node.js CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - '*'
+      - '!test'
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '14'
+
+    - name: Install dependencies
+      run: npm install
+
+    - name: Build Docker image
+      run: |
+        docker build \
+          --build-arg BRANCH_NAME=${GITHUB_REF#refs/heads/} \
+          -t username/image:latest \
+          -t username/image:${GITHUB_REF#refs/heads/} \
+          -f Dockerfile .
+        
+    - name: Push Docker image to Docker Hub
+      run: |
+        docker login -u username -p ${{ secrets.dckr_pat_bJ3Xpj4OtTQr9x9d4aIJLK2e-UE }}
+        docker push username/image:latest
+        docker push username/image:${GITHUB_REF#refs/heads/}
+
+    - name: Deploy
+      if: github.event_name == 'push' && github.ref != 'refs/heads/test'
+      run: |
+        docker run -d -p 3000:3000 --name container-name \
+          -e DEPLOYED_FROM=${GITHUB_REF#refs/heads/} \
+          -u app \
+          -v "$(pwd)":/usr/src/opt \
+          username/image:${GITHUB_REF#refs/heads/}
